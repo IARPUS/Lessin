@@ -1,0 +1,1 @@
+sqlalchemy.url = postgresql://user:pass@localhost/lessin
