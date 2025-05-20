@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Form
+from fastapi import FastAPI, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import SQLModel, Field, create_engine, Session
 from typing import Optional
@@ -10,6 +10,15 @@ load_dotenv()
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 engine = create_engine(DATABASE_URL, echo=True)
+
+from sqlmodel import UniqueConstraint
+
+class User(SQLModel, table=True):
+    __table_args__ = (UniqueConstraint("username"),)
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    username: str
+    password: str  # This will be hashed later
 
 class Plan(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -37,3 +46,31 @@ async def generate_plan(topics: str = Form(...)):
         session.commit()
         session.refresh(plan)
         return {"plan": plan}
+
+
+@app.post("/signup")
+def signup(username: str = Form(...), password: str = Form(...)):
+    with Session(engine) as session:
+        existing_user = session.exec(
+            select(User).where(User.username == username)
+        ).first()
+        if existing_user:
+            raise HTTPException(status_code=400, detail="Username already exists")
+
+        user = User(username=username, password=password)  # TODO: hash
+        session.add(user)
+        session.commit()
+        session.refresh(user)
+        return {"id": user.id, "username": user.username}
+
+
+@app.post("/login")
+def login(username: str = Form(...), password: str = Form(...)):
+    with Session(engine) as session:
+        user = session.exec(
+            select(User).where(User.username == username)
+        ).first()
+        if not user or user.password != password:
+            raise HTTPException(status_code=401, detail="Invalid credentials")
+
+        return {"message": "Login successful", "user_id": user.id}
