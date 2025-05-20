@@ -1,0 +1,112 @@
+import React, { useState } from 'react';
+import {
+  Avatar,
+  Box,
+  Button,
+  Container,
+  CssBaseline,
+  Paper,
+  TextField,
+  Typography,
+} from '@mui/material';
+import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
+import { Link } from 'react-router-dom';
+
+const LoginPage: React.FC = () => {
+  const [username, setUsername] = useState<string>('');
+  const [email, setEmail] = useState<string>('');
+  const [password, setPassword] = useState<string>('');
+
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    console.log('Username:', username);
+    console.log('Email:', email);
+    console.log('Password:', password);
+  };
+
+  return (
+    <Container component="main" maxWidth="xs">
+      <CssBaseline />
+      <Paper
+        elevation={4}
+        sx={{
+          mt: 8,
+          p: 4,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          borderRadius: 3,
+        }}
+      >
+        <Avatar sx={{ m: 1, bgcolor: 'primary.main' }}>
+          <LockOutlinedIcon />
+        </Avatar>
+
+        <Typography component="h1" variant="h5">
+          Sign In
+        </Typography>
+
+        <Box
+          component="form"
+          onSubmit={handleSubmit}
+          sx={{ mt: 2, width: '100%' }}
+        >
+          <TextField
+            required
+            fullWidth
+            label="Username"
+            name="username"
+            autoComplete="username"
+            margin="normal"
+            value={username}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+              setUsername(e.target.value)
+            }
+          />
+
+          <TextField
+            required
+            fullWidth
+            label="Email Address"
+            name="email"
+            type="email"
+            autoComplete="email"
+            margin="normal"
+            value={email}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+              setEmail(e.target.value)
+            }
+          />
+
+          <TextField
+            required
+            fullWidth
+            label="Password"
+            name="password"
+            type="password"
+            autoComplete="current-password"
+            margin="normal"
+            value={password}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+              setPassword(e.target.value)
+            }
+          />
+
+          <Button
+            type="submit"
+            fullWidth
+            variant="contained"
+            sx={{ mt: 3, mb: 2 }}
+          >
+            Sign In
+          </Button>
+        </Box>
+        <Typography variant="body2" sx={{ mt: 1 }}>
+          Don't have an account? <Link to="/register">Register</Link>
+        </Typography>
+      </Paper>
+    </Container>
+  );
+};
+
+export default LoginPage;
