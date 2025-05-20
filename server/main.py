@@ -1,30 +1,41 @@
 from fastapi import FastAPI, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from sqlmodel import SQLModel, Field, create_engine, Session, select
+from sqlmodel import SQLModel, Field, create_engine, Session, select, UniqueConstraint
 from typing import Optional
 import os
 from dotenv import load_dotenv
+from passlib.context import CryptContext
 
+# Load env variables
 load_dotenv()
-
 DATABASE_URL = os.getenv("DATABASE_URL")
 
+# Set up engine
 engine = create_engine(DATABASE_URL, echo=True)
 
-from sqlmodel import UniqueConstraint
+# Password hashing setup
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
+def hash_password(password: str) -> str:
+    return pwd_context.hash(password)
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    return pwd_context.verify(plain_password, hashed_password)
+
+# Models
 class User(SQLModel, table=True):
     __table_args__ = (UniqueConstraint("username"),)
-
     id: Optional[int] = Field(default=None, primary_key=True)
     username: str
-    password: str  # This will be hashed later
+    email: str
+    password: str  # hashed
 
 class Plan(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     topics: str
     content: str
 
+# App setup
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
@@ -37,6 +48,40 @@ app.add_middleware(
 def on_startup():
     SQLModel.metadata.create_all(engine)
 
+# Routes
+@app.post("/signup")
+def signup(
+    username: str = Form(...),
+    email: str = Form(...),
+    password: str = Form(...)
+):
+    with Session(engine) as session:
+        existing_user = session.exec(
+            select(User).where(User.username == username)
+        ).first()
+        if existing_user:
+            raise HTTPException(status_code=400, detail="Username already exists")
+
+        hashed_pw = hash_password(password)
+        user = User(username=username, email=email, password=hashed_pw)
+        session.add(user)
+        session.commit()
+        session.refresh(user)
+        return {"id": user.id, "username": user.username, "email": user.email}
+
+
+@app.post("/login")
+def login(username: str = Form(...), password: str = Form(...)):
+    with Session(engine) as session:
+        user = session.exec(
+            select(User).where(User.username == username)
+        ).first()
+        if not user or not verify_password(password, user.password):
+            raise HTTPException(status_code=401, detail="Invalid credentials")
+
+        return {"message": "Login successful", "user_id": user.id}
+
+
 @app.post("/plans/generate")
 async def generate_plan(topics: str = Form(...)):
     content = f"Plan steps for {topics}"
@@ -46,31 +91,3 @@ async def generate_plan(topics: str = Form(...)):
         session.commit()
         session.refresh(plan)
         return {"plan": plan}
-
-
-@app.post("/signup")
-def signup(username: str = Form(...), password: str = Form(...)):
-    with Session(engine) as session:
-        existing_user = session.exec(
-            select(User).where(User.username == username)
-        ).first()
-        if existing_user:
-            raise HTTPException(status_code=400, detail="Username already exists")
-
-        user = User(username=username, password=password)  # TODO: hash
-        session.add(user)
-        session.commit()
-        session.refresh(user)
-        return {"id": user.id, "username": user.username}
-
-
-@app.post("/login")
-def login(username: str = Form(...), password: str = Form(...)):
-    with Session(engine) as session:
-        user = session.exec(
-            select(User).where(User.username == username)
-        ).first()
-        if not user or user.password != password:
-            raise HTTPException(status_code=401, detail="Invalid credentials")
-
-        return {"message": "Login successful", "user_id": user.id}
