@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import SQLModel, Field, create_engine, Session, select, UniqueConstraint
-from typing import Optional
+from typing import Optional, List
 import os
 from dotenv import load_dotenv
 from passlib.context import CryptContext
@@ -10,10 +10,10 @@ from passlib.context import CryptContext
 load_dotenv()
 DATABASE_URL = os.getenv("DATABASE_URL")
 
-# Set up engine
+# Set up DB engine
 engine = create_engine(DATABASE_URL, echo=True)
 
-# Password hashing setup
+# Password hashing
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 def hash_password(password: str) -> str:
@@ -29,6 +29,7 @@ class User(SQLModel, table=True):
     username: str
     email: str
     password: str  # hashed
+    preferences: Optional[List[str]] = Field(default=None, sa_column_kwargs={"type_": JSON})
 
 class Plan(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -48,7 +49,7 @@ app.add_middleware(
 def on_startup():
     SQLModel.metadata.create_all(engine)
 
-# Routes
+# Signup route
 @app.post("/signup")
 def signup(
     username: str = Form(...),
@@ -69,7 +70,7 @@ def signup(
         session.refresh(user)
         return {"id": user.id, "username": user.username, "email": user.email}
 
-
+# Login route
 @app.post("/login")
 def login(username: str = Form(...), password: str = Form(...)):
     with Session(engine) as session:
@@ -81,7 +82,34 @@ def login(username: str = Form(...), password: str = Form(...)):
 
         return {"message": "Login successful", "user_id": user.id}
 
+# Survey route to store user preferences
+@app.post("/survey")
+def submit_survey(
+    user_id: int = Form(...),
+    preferences: str = Form(...)  # comma-separated values like "quizzes,videos"
+):
+    prefs_list = [p.strip() for p in preferences.split(",")]
 
+    with Session(engine) as session:
+        user = session.get(User, user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        user.preferences = prefs_list
+        session.add(user)
+        session.commit()
+        session.refresh(user)
+
+        return {
+            "message": "Preferences saved",
+            "user": {
+                "id": user.id,
+                "username": user.username,
+                "preferences": user.preferences
+            }
+        }
+
+# Plan generation endpoint (placeholder)
 @app.post("/plans/generate")
 async def generate_plan(topics: str = Form(...)):
     content = f"Plan steps for {topics}"
