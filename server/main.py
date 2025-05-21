@@ -5,6 +5,7 @@ from typing import Optional, List
 import os
 from dotenv import load_dotenv
 from passlib.context import CryptContext
+from sqlalchemy.dialects.postgresql import JSON
 
 # Load env variables
 load_dotenv()
@@ -28,7 +29,7 @@ class User(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     username: str
     email: str
-    password: str  # hashed
+    password: str
     preferences: Optional[List[str]] = Field(default=None, sa_column_kwargs={"type_": JSON})
 
 class Plan(SQLModel, table=True):
@@ -38,9 +39,12 @@ class Plan(SQLModel, table=True):
 
 # App setup
 app = FastAPI()
+
+# CORS setup
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost:5173"],  # Or ["*"] for dev, but not for prod
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -82,11 +86,11 @@ def login(username: str = Form(...), password: str = Form(...)):
 
         return {"message": "Login successful", "user_id": user.id}
 
-# Survey route to store user preferences
+# Survey route
 @app.post("/survey")
 def submit_survey(
     user_id: int = Form(...),
-    preferences: str = Form(...)  # comma-separated values like "quizzes,videos"
+    preferences: str = Form(...)
 ):
     prefs_list = [p.strip() for p in preferences.split(",")]
 
@@ -109,7 +113,7 @@ def submit_survey(
             }
         }
 
-# Plan generation endpoint (placeholder)
+# Plan generation route
 @app.post("/plans/generate")
 async def generate_plan(topics: str = Form(...)):
     content = f"Plan steps for {topics}"
