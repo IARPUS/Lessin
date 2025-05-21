@@ -6,7 +6,6 @@ import os
 import json
 from dotenv import load_dotenv
 from passlib.context import CryptContext
-from sqlalchemy.dialects.postgresql import JSON
 
 # Load environment variables
 load_dotenv()
@@ -30,8 +29,8 @@ class User(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     username: str
     email: str
-    password: str
-    preferences: Optional[dict] = Field(default=None, sa_column_kwargs={"type_": JSON})
+    password: str  # hashed
+    preferences: Optional[str] = None  # JSON string
 
 class Plan(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -43,7 +42,7 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],  # Replace with frontend domain in prod
+    allow_origins=["http://localhost:5173"],  # Change in prod
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -53,7 +52,6 @@ app.add_middleware(
 def on_startup():
     SQLModel.metadata.create_all(engine)
 
-# Signup route
 @app.post("/signup")
 def signup(
     username: str = Form(...),
@@ -74,7 +72,6 @@ def signup(
         session.refresh(user)
         return {"id": user.id, "username": user.username, "email": user.email}
 
-# Login route
 @app.post("/login")
 def login(username: str = Form(...), password: str = Form(...)):
     with Session(engine) as session:
@@ -86,14 +83,13 @@ def login(username: str = Form(...), password: str = Form(...)):
 
         return {"message": "Login successful", "user_id": user.id}
 
-# Survey route to store preferences
 @app.post("/survey")
 def submit_survey(
     user_id: int = Form(...),
-    preferences: str = Form(...)  # JSON string: {"likesFlashcards": true, "likesVideos": false}
+    preferences: str = Form(...)  # expects JSON string
 ):
     try:
-        prefs_dict = json.loads(preferences)
+        json.loads(preferences)  # validate it's valid JSON
     except json.JSONDecodeError:
         raise HTTPException(status_code=400, detail="Invalid JSON in preferences")
 
@@ -102,7 +98,7 @@ def submit_survey(
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
 
-        user.preferences = prefs_dict
+        user.preferences = preferences
         session.add(user)
         session.commit()
         session.refresh(user)
@@ -112,11 +108,10 @@ def submit_survey(
             "user": {
                 "id": user.id,
                 "username": user.username,
-                "preferences": user.preferences
+                "preferences": json.loads(user.preferences)
             }
         }
 
-# Plan generation endpoint (placeholder)
 @app.post("/plans/generate")
 async def generate_plan(topics: str = Form(...)):
     content = f"Plan steps for {topics}"
