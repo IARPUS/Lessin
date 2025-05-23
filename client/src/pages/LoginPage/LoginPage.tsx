@@ -10,18 +10,33 @@ import {
   Typography,
 } from '@mui/material';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { loginUser } from '../../apis/authentication';
+import { useAuth } from '../../contexts/AuthContext'; // ✅ import context
 
 const LoginPage: React.FC = () => {
-  const [username, setUsername] = useState<string>('');
-  const [email, setEmail] = useState<string>('');
-  const [password, setPassword] = useState<string>('');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const navigate = useNavigate();
+  const { setUserId } = useAuth(); // ✅ use context
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    console.log('Username:', username);
-    console.log('Email:', email);
-    console.log('Password:', password);
+
+    if (!username.trim() || !password.trim()) {
+      alert("Username and password cannot be empty.");
+      return;
+    }
+
+    try {
+      const response = await loginUser({ username, password });
+      console.log('Login successful:', response);
+      setUserId(response.user_id);
+      navigate('/dashboard');
+    } catch (err) {
+      console.error('Login failed:', err);
+      alert('Login failed: ' + err);
+    }
   };
 
   return (
@@ -61,20 +76,6 @@ const LoginPage: React.FC = () => {
             value={username}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
               setUsername(e.target.value)
-            }
-          />
-
-          <TextField
-            required
-            fullWidth
-            label="Email Address"
-            name="email"
-            type="email"
-            autoComplete="email"
-            margin="normal"
-            value={email}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-              setEmail(e.target.value)
             }
           />
 

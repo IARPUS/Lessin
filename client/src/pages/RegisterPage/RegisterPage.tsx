@@ -10,14 +10,19 @@ import {
   Typography,
 } from '@mui/material';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { registerUser } from '../../apis/authentication';
+import { useAuth } from '../../contexts/AuthContext';
+
 const RegisterPage: React.FC = () => {
   const [name, setName] = useState<string>('');
   const [email, setEmail] = useState<string>('');
   const [password, setPassword] = useState<string>('');
   const [confirmPassword, setConfirmPassword] = useState<string>('');
+  const navigate = useNavigate();
+  const { setUserId } = useAuth(); // <-- 👈 use context
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     if (password !== confirmPassword) {
@@ -25,11 +30,22 @@ const RegisterPage: React.FC = () => {
       return;
     }
 
-    // Replace this with your real registration logic
-    console.log('Name:', name);
-    console.log('Email:', email);
-    console.log('Password:', password);
+    try {
+      const response = await registerUser({
+        username: name,
+        email,
+        password,
+      });
+
+      console.log('Registration successful:', response);
+      setUserId(response.id);
+      navigate('/login');
+    } catch (err) {
+      console.error('Registration failed:', err);
+      alert('Registration failed: ' + err);
+    }
   };
+
 
   return (
     <Container component="main" maxWidth="xs">

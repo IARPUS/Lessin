@@ -11,13 +11,16 @@ interface RegisterPayload {
 interface LoginPayload {
   // define the expected payload shape
   username: string;
-  email: string;
   password: string;
 }
 
 export const registerUser = async (payload: RegisterPayload) => {
   try {
-    const response = await axios.post(API_URL, payload);
+    const formData = new FormData();
+    formData.append('username', payload.username);
+    formData.append('email', payload.email);
+    formData.append('password', payload.password);
+    const response = await axios.post(API_URL + "/signup", formData);
     return response.data;
   } catch (error: any) {
     console.error('Error registering: ', error);
@@ -26,7 +29,10 @@ export const registerUser = async (payload: RegisterPayload) => {
 };
 export const loginUser = async (payload: LoginPayload) => {
   try {
-    const response = await axios.post(API_URL, payload);
+    const formData = new FormData();
+    formData.append('username', payload.username);
+    formData.append('password', payload.password);
+    const response = await axios.post(API_URL + "/login", formData);
     return response.data;
   } catch (error: any) {
     console.error('Error registering: ', error);
