@@ -9,16 +9,17 @@ import SkillsModal from './SkillsModal';
 import { fetchUserProfile } from '../../apis/profiles';
 import { useAuth } from '../../contexts/AuthContext'; // Adjust path if needed
 
-const { userId: rawUserId } = useAuth();
-const userId = Number(rawUserId);
-if (!rawUserId || isNaN(userId)) {
-  return (
-    <Box p={4}>
-      <Typography variant="h6">Access Denied</Typography>
-    </Box>
-  );
-}
+const ProfilePage: React.FC = () => {
+  const { userId: rawUserId } = useAuth();
+  const userId = Number(rawUserId);
 
+  if (!rawUserId || isNaN(userId)) {
+    return (
+      <Box p={4}>
+        <Typography variant="h6">Access Denied</Typography>
+      </Box>
+    );
+  }
 
   const [resumeURL, setResumeURL] = useState<string | null>(null);
   const [resumeName, setResumeName] = useState<string>('Resume Name');
@@ -75,7 +76,7 @@ if (!rawUserId || isNaN(userId)) {
       const now = new Date();
       setResumeName(file.name);
       setUploadTime(now.toLocaleString());
-      setResumeURL(URL.createObjectURL(file)); // creates temp URL for preview
+      setResumeURL(URL.createObjectURL(file));
     }
     setResumeUploadModalOpen(false);
   };
