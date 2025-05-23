@@ -9,7 +9,7 @@ import {
   FormControlLabel
 } from '@mui/material';
 import type { UserExperience } from '../../components/types/profileTypes';
-
+import { updateExperience } from "../../apis/profiles"
 interface ExperienceModalProps {
   open: boolean;
   onClose: () => void;
@@ -64,7 +64,7 @@ const ExperienceModal: React.FC<ExperienceModalProps> = ({ open, onClose, onSave
     setFormData((prev) => ({ ...prev, current: e.target.checked }));
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const requiredFields: (keyof UserExperience)[] = ['title', 'company', 'location', 'type', 'startDate', 'description'];
     for (const field of requiredFields) {
       if (!formData[field]) {
@@ -72,14 +72,31 @@ const ExperienceModal: React.FC<ExperienceModalProps> = ({ open, onClose, onSave
         return;
       }
     }
+
     const payload: UserExperience = {
       ...formData,
-      endDate: formData.current ? 'Present' : formData.endDate
+      endDate: formData.current ? 'Present' : formData.endDate,
     };
-    console.log(payload);
-    onSave(payload);
-    onClose();
+
+    try {
+      if (initialData?.id) {
+        await updateExperience(initialData.id, {
+          title: payload.title,
+          company: payload.company,
+          location: payload.location,
+          type: payload.type,
+          startDate: payload.startDate,
+          endDate: payload.endDate === 'Present' ? '' : payload.endDate,
+        });
+      } else {
+        onSave(payload); // create mode uses passed in onSave()
+      }
+      onClose();
+    } catch (error) {
+      console.error('Failed to save experience:', error);
+    }
   };
+
 
   return (
     <Modal open={open} onClose={onClose}>

@@ -1,4 +1,5 @@
 export interface UserExperience {
+  id?: number; // optional for new entries, required for edits
   title: string;
   company: string;
   location: string;

@@ -7,20 +7,29 @@ import {
   Button,
   Chip,
 } from '@mui/material';
+import { updateSkillsBatch } from '../../apis/profiles'; // adjust path as needed
 
 interface SkillsModalProps {
   open: boolean;
   onClose: () => void;
+  userId: number;
   skills: string[];
-  onSave: (skills: string[]) => void;
+  onUpdateSuccess: () => void;
 }
 
-const SkillsModal: React.FC<SkillsModalProps> = ({ open, onClose, skills, onSave }) => {
+const SkillsModal: React.FC<SkillsModalProps> = ({
+  open,
+  onClose,
+  userId,
+  skills,
+  onUpdateSuccess,
+}) => {
   const [newSkill, setNewSkill] = useState('');
   const [localSkills, setLocalSkills] = useState<string[]>([]);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    setLocalSkills([...skills]); // Sync local state with parent skills when modal opens
+    setLocalSkills([...skills]); // Sync local state with prop
   }, [skills, open]);
 
   const handleAddSkill = () => {
@@ -35,9 +44,18 @@ const SkillsModal: React.FC<SkillsModalProps> = ({ open, onClose, skills, onSave
     setLocalSkills(prev => prev.filter(skill => skill !== skillToDelete));
   };
 
-  const handleSubmit = () => {
-    onSave([...localSkills]);
-    onClose();
+  const handleSubmit = async () => {
+    setSaving(true);
+    try {
+      await updateSkillsBatch(userId, localSkills);
+      onUpdateSuccess(); // Trigger refresh in parent
+      onClose();
+    } catch (err) {
+      console.error('Failed to update skills:', err);
+      alert('Failed to update skills. Please try again.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -86,8 +104,10 @@ const SkillsModal: React.FC<SkillsModalProps> = ({ open, onClose, skills, onSave
         <Box display="flex" justifyContent="space-between">
           <Button variant="outlined" onClick={handleAddSkill} disabled={!newSkill.trim()}>Add</Button>
           <Box>
-            <Button onClick={onClose}>Cancel</Button>
-            <Button variant="contained" onClick={handleSubmit} sx={{ ml: 1 }}>Save</Button>
+            <Button onClick={onClose} disabled={saving}>Cancel</Button>
+            <Button variant="contained" onClick={handleSubmit} sx={{ ml: 1 }} disabled={saving}>
+              {saving ? 'Saving...' : 'Save'}
+            </Button>
           </Box>
         </Box>
       </Box>
