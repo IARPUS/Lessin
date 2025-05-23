@@ -9,7 +9,7 @@ GlobalWorkerOptions.workerSrc = new URL(
 ).toString();
 
 const MaterialUploadForm = ({ isGuest }: { isGuest: boolean }) => {
-  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const [setUploadedFiles] = useState<File[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
