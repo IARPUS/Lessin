@@ -7,10 +7,11 @@ import ResumeUploadModal from './ResumeUploadModal';
 import ExperienceModal from './ExperienceModal';
 import SkillsModal from './SkillsModal';
 import { fetchUserProfile } from '../../apis/profiles';
-import { useAuth } from '../../contexts/AuthContext'; // Adjust path if needed
+import { useAuth } from '../../contexts/AuthContext';
 
 const ProfilePage: React.FC = () => {
   const { userId } = useAuth();
+
   if (!userId) {
     return (
       <Box p={4}>
@@ -19,14 +20,13 @@ const ProfilePage: React.FC = () => {
     );
   }
 
+  const numericUserId = Number(userId);
 
   const [resumeURL, setResumeURL] = useState<string | null>(null);
   const [resumeName, setResumeName] = useState<string>('Resume Name');
   const [uploadTime, setUploadTime] = useState<string>('Not uploaded yet');
 
   const [resumeUploadModal, setResumeUploadModalOpen] = useState(false);
-  const [file, setFile] = useState<File | null>(null);
-
   const [experiences, setExperiences] = useState<any[]>([]);
   const [expModalOpen, setExpModalOpen] = useState(false);
   const [editingExperience, setEditingExperience] = useState<any | null>(null);
@@ -36,15 +36,11 @@ const ProfilePage: React.FC = () => {
 
   const fetchProfileData = async () => {
     try {
-      const profile = await fetchUserProfile(userId);
+      const profile = await fetchUserProfile(numericUserId);
 
-      // Skills
       setSkills(profile.skills.map((s: any) => s.skill_name));
-
-      // Experiences
       setExperiences(profile.experiences);
 
-      // Resume
       if (profile.resumes && profile.resumes.length > 0) {
         const latest = profile.resumes[0];
         setResumeName(latest.file_name);
@@ -63,22 +59,6 @@ const ProfilePage: React.FC = () => {
   useEffect(() => {
     fetchProfileData();
   }, []);
-
-  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files?.[0]) {
-      setFile(e.target.files[0]);
-    }
-  };
-
-  const upload = () => {
-    if (file) {
-      const now = new Date();
-      setResumeName(file.name);
-      setUploadTime(now.toLocaleString());
-      setResumeURL(URL.createObjectURL(file)); // creates temp URL for preview
-    }
-    setResumeUploadModalOpen(false);
-  };
 
   const handleExperienceSave = (data: any) => {
     if (editingExperience) {
@@ -116,7 +96,7 @@ const ProfilePage: React.FC = () => {
             <ResumeUploadModal
               open={resumeUploadModal}
               onClose={() => setResumeUploadModalOpen(false)}
-              userId={userId}
+              userId={numericUserId}
               onUploadSuccess={fetchProfileData}
             />
           </Box>
@@ -141,10 +121,13 @@ const ProfilePage: React.FC = () => {
         <Paper elevation={1} sx={{ p: 3, mb: 3 }}>
           <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
             <Typography variant="h6">Work Experience</Typography>
-            <Button variant="contained" onClick={() => {
-              setEditingExperience(null);
-              setExpModalOpen(true);
-            }}>
+            <Button
+              variant="contained"
+              onClick={() => {
+                setEditingExperience(null);
+                setExpModalOpen(true);
+              }}
+            >
               Add New Experience
             </Button>
           </Box>
@@ -186,7 +169,7 @@ const ProfilePage: React.FC = () => {
 
           <SkillsModal
             open={skillModalOpen}
-            userId={userId}
+            userId={numericUserId}
             skills={skills}
             onClose={() => setSkillModalOpen(false)}
             onUpdateSuccess={fetchProfileData}
