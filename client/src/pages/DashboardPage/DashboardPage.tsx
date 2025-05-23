@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Box, Container, Typography } from '@mui/material';
-import MuiGrid from '@mui/material/Grid'; // ✅ explicitly using MUI Grid as MuiGrid
+import Grid from '@mui/material/Unstable_Grid2'; // ✅ this supports container/item/xs/etc in MUI v7
 
 import Navbar from '../../components/Navbar/Navbar';
 import MaterialUploadForm from '../../components/MaterialUploadForm/MaterialUploadForm';
@@ -27,23 +27,23 @@ const DashboardPage: React.FC = () => {
           My Sets
         </Typography>
 
-        <MuiGrid
+        <Grid
           container
           spacing={3}
           sx={{ mt: 2 }}
           alignItems="flex-start"
         >
           {[...Array(8)].map((_, i) => (
-            <MuiGrid item xs={12} sm={6} md={4} key={i}>
+            <Grid item xs={12} sm={6} md={4} key={i}>
               <StudySetCard
                 id={`ap_us_history_${i}`}
                 title="AP US History"
                 description="An AI tutor to help you master AP US History with summaries, flashcards, and quizzes."
                 createdAt="2024-05-20T12:34:56Z"
               />
-            </MuiGrid>
+            </Grid>
           ))}
-        </MuiGrid>
+        </Grid>
       </Container>
     </Box>
   );
