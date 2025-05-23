@@ -9,15 +9,16 @@ import SkillsModal from './SkillsModal';
 import { fetchUserProfile } from '../../apis/profiles';
 import { useAuth } from '../../contexts/AuthContext'; // Adjust path if needed
 
-const ProfilePage: React.FC = () => {
-  const { userId } = useAuth();
-  if (userId === null) {
-    return (
-      <Box p={4}>
-        <Typography variant="h6">Access Denied</Typography>
-      </Box>
-    );
-  }
+const { userId: rawUserId } = useAuth();
+const userId = Number(rawUserId);
+if (!rawUserId || isNaN(userId)) {
+  return (
+    <Box p={4}>
+      <Typography variant="h6">Access Denied</Typography>
+    </Box>
+  );
+}
+
 
   const [resumeURL, setResumeURL] = useState<string | null>(null);
   const [resumeName, setResumeName] = useState<string>('Resume Name');
