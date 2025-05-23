@@ -182,7 +182,29 @@ def delete_skill(skill_id: int):
         session.delete(skill)
         session.commit()
         return {"message": "Skill deleted"}
+@app.post("/skills/batch")
+def update_skills(user_id: int = Form(...), skills_json: str = Form(...)):
+    new_skills = json.loads(skills_json)  # e.g., ["React", "Python", "SQL"]
 
+    with Session(engine) as session:
+        # Get existing skills for this user
+        existing_skills = session.exec(select(Skill).where(Skill.user_id == user_id)).all()
+        existing_names = {s.skill_name for s in existing_skills}
+        new_names = set(new_skills)
+
+        # Delete removed skills
+        for skill in existing_skills:
+            if skill.skill_name not in new_names:
+                session.delete(skill)
+
+        # Add new skills
+        for name in new_names:
+            if name not in existing_names:
+                session.add(Skill(user_id=user_id, skill_name=name))
+
+        session.commit()
+
+    return {"message": "Skills updated"}
 @app.delete("/resumes/{resume_id}")
 def delete_resume(resume_id: int):
     with Session(engine) as session:
@@ -202,3 +224,29 @@ def delete_experience(experience_id: int):
         session.delete(experience)
         session.commit()
         return {"message": "Experience deleted"}
+    
+
+@app.put("/experiences/{experience_id}")
+def update_experience(
+    experience_id: int = Path(...),
+    title: str = Form(...),
+    company: str = Form(...),
+    location: Optional[str] = Form(None),
+    type: Optional[str] = Form(None),
+    start_date: Optional[date] = Form(None),
+    end_date: Optional[date] = Form(None),
+):
+    with Session(engine) as session:
+        experience = session.get(Experience, experience_id)
+        if not experience:
+            raise HTTPException(status_code=404, detail="Experience not found")
+        experience.title = title
+        experience.company = company
+        experience.location = location
+        experience.type = type
+        experience.start_date = start_date
+        experience.end_date = end_date
+        session.add(experience)
+        session.commit()
+        session.refresh(experience)
+        return experience
