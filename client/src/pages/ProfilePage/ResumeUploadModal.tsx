@@ -7,6 +7,8 @@ interface ResumeUploadModalProps {
   onFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onUpload: () => void;
   selectedFile: File | null;
+  userId: number;
+  onUploadSuccess: () => Promise<void>;
 }
 
 const ResumeUploadModal: React.FC<ResumeUploadModalProps> = ({
