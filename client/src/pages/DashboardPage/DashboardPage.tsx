@@ -1,8 +1,6 @@
-// src/pages/DashboardPage/DashboardPage.tsx
-
 import React from 'react';
 import { Box, Container, Typography } from '@mui/material';
-import Grid from '@mui/material/Unstable_Grid2'; // ✅ this supports container/item/xs/etc in MUI v7
+import Grid from '@mui/material/Grid';
 
 import Navbar from '../../components/Navbar/Navbar';
 import MaterialUploadForm from '../../components/MaterialUploadForm/MaterialUploadForm';
@@ -12,13 +10,7 @@ const DashboardPage: React.FC = () => {
   return (
     <Box>
       <Navbar />
-      <Container
-        sx={{
-          mt: 4,
-          display: 'block',
-          px: 2,
-        }}
-      >
+      <Container sx={{ mt: 4, display: 'block', px: 2 }}>
         <Box sx={{ display: 'flex', justifyContent: 'center' }}>
           <MaterialUploadForm isGuest={false} />
         </Box>
@@ -27,12 +19,7 @@ const DashboardPage: React.FC = () => {
           My Sets
         </Typography>
 
-        <Grid
-          container
-          spacing={3}
-          sx={{ mt: 2 }}
-          alignItems="flex-start"
-        >
+        <Grid container spacing={3} sx={{ mt: 2 }} alignItems="flex-start">
           {[...Array(8)].map((_, i) => (
             <Grid item xs={12} sm={6} md={4} key={i}>
               <StudySetCard
