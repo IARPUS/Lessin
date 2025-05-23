@@ -9,7 +9,6 @@ GlobalWorkerOptions.workerSrc = new URL(
 ).toString();
 
 const MaterialUploadForm = ({ isGuest }: { isGuest: boolean }) => {
-  const [setUploadedFiles] = useState<File[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -31,7 +30,8 @@ const MaterialUploadForm = ({ isGuest }: { isGuest: boolean }) => {
           return;
         }
 
-        setUploadedFiles(prev => [...prev, file]);
+        // Optional: do something with `file` here, like send to backend
+        console.log('PDF uploaded:', file.name);
       } catch (err) {
         console.error(err);
         setError('Failed to read PDF.');
