@@ -1,5 +1,6 @@
 import React from 'react';
-import { Box, Container, Typography, Grid } from '@mui/material'; // ✅ Fix is here
+import { Box, Container, Typography } from '@mui/material'; // ✅ Fix is here
+import Grid from '@mui/material/Grid'; // ✅ Correct: default import
 import Navbar from '../../components/Navbar/Navbar';
 import MaterialUploadForm from '../../components/MaterialUploadForm/MaterialUploadForm';
 import StudySetCard from '../../components/StudySetCard/StudySetCard';
