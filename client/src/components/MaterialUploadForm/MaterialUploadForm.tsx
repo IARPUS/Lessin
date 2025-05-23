@@ -1,51 +1,99 @@
-// src/pages/DashboardPage/DashboardPage.tsx
+import React, { useState } from 'react';
+import { Box, Typography, IconButton, Input, Alert } from '@mui/material';
+import AddIcon from '@mui/icons-material/Add';
+import { GlobalWorkerOptions, getDocument } from 'pdfjs-dist';
 
-import React from 'react';
-import { Box, Container, Typography, Grid } from '@mui/material';
+GlobalWorkerOptions.workerSrc = new URL(
+  'pdfjs-dist/build/pdf.worker.js',
+  import.meta.url
+).toString();
 
-import Navbar from '../../components/Navbar/Navbar';
-import MaterialUploadForm from '../../components/MaterialUploadForm/MaterialUploadForm';
-import StudySetCard from '../../components/StudySetCard/StudySetCard';
+const MaterialUploadForm = ({ isGuest }: { isGuest: boolean }) => {
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
-const DashboardPage: React.FC = () => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    setError(null);
+    const file = e.target.files?.[0];
+    if (!file || file.type !== 'application/pdf') {
+      setError('Please upload your study material (pdf).');
+      return;
+    }
+
+    const fileReader = new FileReader();
+    fileReader.onload = async () => {
+      try {
+        const typedArray = new Uint8Array(fileReader.result as ArrayBuffer);
+        const pdf = await getDocument(typedArray).promise;
+
+        if (isGuest && pdf.numPages > 1) {
+          setError('Guests can only upload a single-page PDF.');
+          return;
+        }
+
+        setUploadedFiles(prev => [...prev, file]);
+      } catch (err) {
+        console.error(err);
+        setError('Failed to read PDF.');
+      }
+    };
+
+    fileReader.readAsArrayBuffer(file);
+  };
+
   return (
-    <Box>
-      <Navbar />
-      <Container
-        sx={{
-          mt: 4,
-          display: 'block',
-          px: 2,
-        }}
-      >
-        <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-          <MaterialUploadForm isGuest={false} />
-        </Box>
-
-        <Typography variant="h5" fontWeight="bold" mt={4} mb={2}>
-          My Sets
-        </Typography>
-
-        <Grid
-          container
-          spacing={3}
-          sx={{ mt: 2 }}
-          alignItems="flex-start"
+    <Box
+      sx={{
+        bgcolor: '#1e1e1e',
+        borderRadius: 4,
+        p: 5,
+        textAlign: 'center',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        maxWidth: 700,
+        mx: 'auto',
+        mt: 5,
+      }}
+    >
+      <label htmlFor="pdf-upload">
+        <IconButton
+          component="span"
+          sx={{
+            bgcolor: 'rgba(50, 80, 255, 0.1)',
+            color: '#3f51b5',
+            width: 72,
+            height: 72,
+            mb: 2,
+            '&:hover': { bgcolor: 'rgba(50, 80, 255, 0.2)' },
+          }}
         >
-          {[...Array(8)].map((_, i) => (
-            <Grid item xs={12} sm={6} md={4} key={i}>
-              <StudySetCard
-                id={`ap_us_history_${i}`}
-                title="AP US History"
-                description="An AI tutor to help you master AP US History with summaries, flashcards, and quizzes."
-                createdAt="2024-05-20T12:34:56Z"
-              />
-            </Grid>
-          ))}
-        </Grid>
-      </Container>
+          <AddIcon sx={{ fontSize: 40 }} />
+        </IconButton>
+      </label>
+
+      <Typography variant="h5" fontWeight="bold" color="#bdbdbd" mb={1}>
+        Join or create an AI to study
+      </Typography>
+      <Typography variant="body2" color="gray" mb={3}>
+        Upload unlimited content — your SAI trains on what you upload and gives custom answers, flashcards, quizzes, and study guides in seconds.
+      </Typography>
+
+      <Input
+        id="pdf-upload"
+        type="file"
+        inputProps={{ accept: 'application/pdf' }}
+        onChange={handleFileChange}
+        sx={{ display: 'none' }}
+      />
+
+      {error && (
+        <Alert severity="error" sx={{ mt: 2 }}>
+          {error}
+        </Alert>
+      )}
     </Box>
   );
 };
 
-export default DashboardPage;
+export default MaterialUploadForm;
