@@ -187,7 +187,6 @@ def update_skills(user_id: int = Form(...), skills_json: str = Form(...)):
     new_skills = json.loads(skills_json)  # e.g., ["React", "Python", "SQL"]
 
     with Session(engine) as session:
-        # Get existing skills for this user
         existing_skills = session.exec(select(Skill).where(Skill.user_id == user_id)).all()
         existing_names = {s.skill_name for s in existing_skills}
         new_names = set(new_skills)
