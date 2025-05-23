@@ -1,6 +1,5 @@
 import React from 'react';
-import { Box, Container, Typography } from '@mui/material';
-import Grid from '@mui/material/Grid';
+import { Box, Container, Typography, Grid } from '@mui/material';
 import Navbar from '../../components/Navbar/Navbar';
 import MaterialUploadForm from '../../components/MaterialUploadForm/MaterialUploadForm';
 import StudySetCard from '../../components/StudySetCard/StudySetCard';
@@ -31,7 +30,7 @@ const DashboardPage: React.FC = () => {
           alignItems="flex-start"
         >
           {[...Array(8)].map((_, i) => (
-            <Grid item xs={12} sm={6} md={4} key={i} component="div">
+            <Grid item xs={12} sm={6} md={4} key={i}>
               <StudySetCard
                 id="ap_us_history_1"
                 title="AP US History"
