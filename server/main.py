@@ -1,12 +1,12 @@
 from fastapi import FastAPI, Form, HTTPException, Path
 from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import SQLModel, Field, create_engine, Session, select, UniqueConstraint
-from typing import Optional, List
+from typing import Optional, List, Literal
 import os
 import json
 from dotenv import load_dotenv
 from passlib.context import CryptContext
-from datetime import date
+from datetime import date, datetime
 
 # Load environment variables
 load_dotenv()
@@ -64,6 +64,32 @@ class ExperienceBulletPoint(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     experience_id: int
     bullet_text: str
+
+class StudySet(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int
+    title: str
+    description: Optional[str] = None
+    created_at: Optional[datetime] = Field(default_factory=datetime.utcnow)
+
+class StudyFile(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    study_set_id: int
+    file_name: str
+    file_url: str
+    uploaded_at: Optional[datetime] = Field(default_factory=datetime.utcnow)
+
+class ChatThread(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    study_set_id: int = Field(unique=True)
+    created_at: Optional[datetime] = Field(default_factory=datetime.utcnow)
+
+class ChatMessage(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    thread_id: int
+    sender: Literal['user', 'gpt']
+    content: str
+    created_at: Optional[datetime] = Field(default_factory=datetime.utcnow)
 
 # App setup
 app = FastAPI()
@@ -267,3 +293,96 @@ def update_experience(
         session.commit()
         session.refresh(experience)
         return experience
+
+# StudySet CRUD
+@app.post("/studysets")
+def create_study_set(user_id: int = Form(...), title: str = Form(...), description: Optional[str] = Form(None)):
+    with Session(engine) as session:
+        study_set = StudySet(user_id=user_id, title=title, description=description)
+        session.add(study_set)
+        session.commit()
+        session.refresh(study_set)
+        return study_set
+
+@app.get("/studysets/{user_id}")
+def get_study_sets(user_id: int):
+    with Session(engine) as session:
+        sets = session.exec(select(StudySet).where(StudySet.user_id == user_id)).all()
+        return sets
+
+@app.put("/studysets/{set_id}")
+def update_study_set(set_id: int, title: str = Form(...), description: Optional[str] = Form(None)):
+    with Session(engine) as session:
+        s = session.get(StudySet, set_id)
+        if not s:
+            raise HTTPException(status_code=404, detail="StudySet not found")
+        s.title = title
+        s.description = description
+        session.commit()
+        return s
+
+@app.delete("/studysets/{set_id}")
+def delete_study_set(set_id: int):
+    with Session(engine) as session:
+        s = session.get(StudySet, set_id)
+        if not s:
+            raise HTTPException(status_code=404, detail="StudySet not found")
+        session.delete(s)
+        session.commit()
+        return {"message": "StudySet deleted"}
+
+# StudyFile CRUD
+@app.post("/studyfiles")
+def upload_study_file(study_set_id: int = Form(...), file_name: str = Form(...), file_url: str = Form(...)):
+    with Session(engine) as session:
+        file = StudyFile(study_set_id=study_set_id, file_name=file_name, file_url=file_url)
+        session.add(file)
+        session.commit()
+        session.refresh(file)
+        return file
+
+@app.get("/studyfiles/{study_set_id}")
+def get_study_files(study_set_id: int):
+    with Session(engine) as session:
+        files = session.exec(select(StudyFile).where(StudyFile.study_set_id == study_set_id)).all()
+        return files
+
+@app.delete("/studyfiles/{file_id}")
+def delete_study_file(file_id: int):
+    with Session(engine) as session:
+        f = session.get(StudyFile, file_id)
+        if not f:
+            raise HTTPException(status_code=404, detail="File not found")
+        session.delete(f)
+        session.commit()
+        return {"message": "File deleted"}
+
+# ChatThread and ChatMessage
+@app.get("/chats/thread/{study_set_id}")
+def get_or_create_thread(study_set_id: int):
+    with Session(engine) as session:
+        thread = session.exec(select(ChatThread).where(ChatThread.study_set_id == study_set_id)).first()
+        if thread:
+            return thread
+        new_thread = ChatThread(study_set_id=study_set_id)
+        session.add(new_thread)
+        session.commit()
+        session.refresh(new_thread)
+        return new_thread
+
+@app.get("/chats/messages/{thread_id}")
+def get_chat_messages(thread_id: int):
+    with Session(engine) as session:
+        messages = session.exec(select(ChatMessage).where(ChatMessage.thread_id == thread_id)).all()
+        return messages
+
+@app.post("/chats/messages")
+def add_chat_message(thread_id: int = Form(...), sender: str = Form(...), content: str = Form(...)):
+    if sender not in ("user", "gpt"):
+        raise HTTPException(status_code=400, detail="Sender must be 'user' or 'gpt'")
+    with Session(engine) as session:
+        message = ChatMessage(thread_id=thread_id, sender=sender, content=content)
+        session.add(message)
+        session.commit()
+        session.refresh(message)
+        return message
