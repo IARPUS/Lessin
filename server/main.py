@@ -133,7 +133,14 @@ def get_user_profile(user_id: int):
         skills = session.exec(select(Skill).where(Skill.user_id == user_id)).all()
         resumes = session.exec(select(Resume).where(Resume.user_id == user_id)).all()
         experiences = session.exec(select(Experience).where(Experience.user_id == user_id)).all()
-        return {"skills": skills, "resumes": resumes, "experiences": experiences}
+        experience_ids = [e.id for e in experiences]
+        bullet_points = session.exec(select(ExperienceBulletPoint).where(ExperienceBulletPoint.experience_id.in_(experience_ids))).all()
+        return {
+            "skills": skills,
+            "resumes": resumes,
+            "experiences": experiences,
+            "experience_bullets": bullet_points,
+        }
 
 @app.post("/skills")
 def add_skill(user_id: int = Form(...), skill_name: str = Form(...)):
@@ -162,7 +169,9 @@ def add_experience(
     type: Optional[str] = Form(None),
     start_date: Optional[date] = Form(None),
     end_date: Optional[date] = Form(None),
+    bullets_json: Optional[str] = Form("[]")
 ):
+    bullets = json.loads(bullets_json)
     with Session(engine) as session:
         experience = Experience(
             user_id=user_id, title=title, company=company, location=location,
@@ -171,7 +180,22 @@ def add_experience(
         session.add(experience)
         session.commit()
         session.refresh(experience)
+        for bullet in bullets:
+            bp = ExperienceBulletPoint(experience_id=experience.id, bullet_text=bullet)
+            session.add(bp)
+        session.commit()
         return experience
+
+@app.put("/experiences/{experience_id}/bullets")
+def update_experience_bullets(experience_id: int = Path(...), bullets_json: str = Form(...)):
+    bullets = json.loads(bullets_json)
+    with Session(engine) as session:
+        session.exec(select(ExperienceBulletPoint).where(ExperienceBulletPoint.experience_id == experience_id)).delete()
+        for bullet in bullets:
+            bp = ExperienceBulletPoint(experience_id=experience_id, bullet_text=bullet)
+            session.add(bp)
+        session.commit()
+        return {"message": "Experience bullets updated"}
 
 @app.delete("/skills/{skill_id}")
 def delete_skill(skill_id: int):
@@ -182,28 +206,23 @@ def delete_skill(skill_id: int):
         session.delete(skill)
         session.commit()
         return {"message": "Skill deleted"}
+
 @app.post("/skills/batch")
 def update_skills(user_id: int = Form(...), skills_json: str = Form(...)):
-    new_skills = json.loads(skills_json)  # e.g., ["React", "Python", "SQL"]
-
+    new_skills = json.loads(skills_json)
     with Session(engine) as session:
         existing_skills = session.exec(select(Skill).where(Skill.user_id == user_id)).all()
         existing_names = {s.skill_name for s in existing_skills}
         new_names = set(new_skills)
-
-        # Delete removed skills
         for skill in existing_skills:
             if skill.skill_name not in new_names:
                 session.delete(skill)
-
-        # Add new skills
         for name in new_names:
             if name not in existing_names:
                 session.add(Skill(user_id=user_id, skill_name=name))
-
         session.commit()
-
     return {"message": "Skills updated"}
+
 @app.delete("/resumes/{resume_id}")
 def delete_resume(resume_id: int):
     with Session(engine) as session:
@@ -223,7 +242,6 @@ def delete_experience(experience_id: int):
         session.delete(experience)
         session.commit()
         return {"message": "Experience deleted"}
-    
 
 @app.put("/experiences/{experience_id}")
 def update_experience(
