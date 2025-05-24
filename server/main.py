@@ -1,7 +1,8 @@
 from fastapi import FastAPI, Form, HTTPException, Path
 from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import SQLModel, Field, create_engine, Session, select, UniqueConstraint
-from typing import Optional, List, Literal
+from typing import Optional, List
+from enum import Enum
 import os
 import json
 from dotenv import load_dotenv
@@ -84,10 +85,14 @@ class ChatThread(SQLModel, table=True):
     study_set_id: int = Field(unique=True)
     created_at: Optional[datetime] = Field(default_factory=datetime.utcnow)
 
+class SenderEnum(str, Enum):
+    user = "user"
+    gpt = "gpt"
+
 class ChatMessage(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     thread_id: int
-    sender: Literal['user', 'gpt']
+    sender: SenderEnum  # ✅ now SQLModel can understand it
     content: str
     created_at: Optional[datetime] = Field(default_factory=datetime.utcnow)
 
