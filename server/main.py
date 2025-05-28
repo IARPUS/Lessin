@@ -410,10 +410,3 @@ from fastapi.staticfiles import StaticFiles
 
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
-if __name__ == "__main__":
-    import uvicorn
-    import os
-
-    port = int(os.environ.get("PORT", 8000))  # Render injects PORT
-    uvicorn.run("main:app", host="0.0.0.0", port=port)
-
