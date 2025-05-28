@@ -1,11 +1,12 @@
 export interface UserExperience {
-  id?: number; // optional for new entries, required for edits
-  title: string;
-  company: string;
-  location: string;
-  type: string;
-  startDate: string;
-  endDate: string;
-  current: boolean;
-  description: string;
+  id?: number;                 // Present when editing existing experiences
+  title: string;               // Job title
+  company: string;             // Company name
+  location: string;            // City or location
+  type: string;                // Internship, Full-time, etc.
+  startDate: string;           // ISO string (e.g., "2024-01-01")
+  endDate: string;             // ISO string or "Present"
+  current: boolean;            // Checkbox flag for "I currently work here"
+  description: string;         // Textarea value (one bullet per line)
+  bullets?: string[];          // Optional derived field for form submission
 }

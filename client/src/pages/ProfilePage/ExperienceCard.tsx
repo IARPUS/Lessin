@@ -9,11 +9,13 @@ interface ExperienceCardProps {
   company: string;
   location: string;
   startDate: string;
-  endDate: string; // could be "Present"
+  endDate: string;
   type: string;
   bullets: string[];
   onEdit: () => void;
+  onDelete: () => void; // ✅ NEW
 }
+
 
 const ExperienceCard: React.FC<ExperienceCardProps> = ({
   title,
@@ -24,6 +26,7 @@ const ExperienceCard: React.FC<ExperienceCardProps> = ({
   type,
   bullets,
   onEdit,
+  onDelete
 }) => {
   const formatDate = (dateStr: string) => {
     if (!dateStr || dateStr === 'Present') return 'Present';
@@ -57,9 +60,10 @@ const ExperienceCard: React.FC<ExperienceCardProps> = ({
           <IconButton onClick={onEdit}>
             <EditIcon fontSize="small" />
           </IconButton>
-          <IconButton>
+          <IconButton onClick={onDelete}> {/* ✅ NEW */}
             <DeleteIcon fontSize="small" />
           </IconButton>
+
         </Box>
       </Box>
 

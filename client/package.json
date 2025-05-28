@@ -15,8 +15,10 @@
     "@mui/icons-material": "5.15.13",
     "@mui/material": "5.15.13",
     "axios": "^1.9.0",
+    "date-fns": "^4.1.0",
     "pdfjs-dist": "^5.2.133",
     "react": "18.2.0",
+    "react-big-calendar": "^1.18.0",
     "react-dom": "18.2.0",
     "react-router-dom": "^7.6.0",
     "tailwindcss": "^4.1.7"
@@ -24,6 +26,7 @@
   "devDependencies": {
     "@eslint/js": "^9.25.0",
     "@types/react": "^18.2.46",
+    "@types/react-big-calendar": "^1.16.1",
     "@types/react-dom": "^18.2.18",
     "@vitejs/plugin-react": "^4.4.1",
     "eslint": "^9.25.0",
@@ -34,5 +37,4 @@
     "typescript-eslint": "^8.30.1",
     "vite": "^6.3.5"
   }
-
 }

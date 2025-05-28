@@ -1,6 +1,7 @@
-from fastapi import FastAPI, Form, HTTPException, Path
+from fastapi import FastAPI, Form, HTTPException, Path, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import SQLModel, Field, create_engine, Session, select, UniqueConstraint
+import shutil
 from typing import Optional, List
 from enum import Enum
 import os
@@ -60,11 +61,8 @@ class Experience(SQLModel, table=True):
     type: Optional[str] = None
     start_date: Optional[date] = None
     end_date: Optional[date] = None
+    bullets: Optional[str] = None  
 
-class ExperienceBulletPoint(SQLModel, table=True):
-    id: Optional[int] = Field(default=None, primary_key=True)
-    experience_id: int
-    bullet_text: str
 
 class StudySet(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -164,14 +162,12 @@ def get_user_profile(user_id: int):
         skills = session.exec(select(Skill).where(Skill.user_id == user_id)).all()
         resumes = session.exec(select(Resume).where(Resume.user_id == user_id)).all()
         experiences = session.exec(select(Experience).where(Experience.user_id == user_id)).all()
-        experience_ids = [e.id for e in experiences]
-        bullet_points = session.exec(select(ExperienceBulletPoint).where(ExperienceBulletPoint.experience_id.in_(experience_ids))).all()
         return {
             "skills": skills,
             "resumes": resumes,
-            "experiences": experiences,
-            "experience_bullets": bullet_points,
+            "experiences": experiences
         }
+
 
 @app.post("/skills")
 def add_skill(user_id: int = Form(...), skill_name: str = Form(...)):
@@ -183,50 +179,23 @@ def add_skill(user_id: int = Form(...), skill_name: str = Form(...)):
         return skill
 
 @app.post("/resumes")
-def add_resume(user_id: int = Form(...), file_name: str = Form(...), file_url: str = Form(...)):
+def add_resume(user_id: int = Form(...), file: UploadFile = File(...)):
+    local_path = f"uploads/{file.filename}"
+    with open(local_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
+    file_url = f"/uploads/{file.filename}"
+
     with Session(engine) as session:
-        resume = Resume(user_id=user_id, file_name=file_name, file_url=file_url)
+        user = session.get(User, user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        resume = Resume(user_id=user_id, file_name=file.filename, file_url=file_url)
         session.add(resume)
         session.commit()
         session.refresh(resume)
         return resume
 
-@app.post("/experiences")
-def add_experience(
-    user_id: int = Form(...),
-    title: str = Form(...),
-    company: str = Form(...),
-    location: Optional[str] = Form(None),
-    type: Optional[str] = Form(None),
-    start_date: Optional[date] = Form(None),
-    end_date: Optional[date] = Form(None),
-    bullets_json: Optional[str] = Form("[]")
-):
-    bullets = json.loads(bullets_json)
-    with Session(engine) as session:
-        experience = Experience(
-            user_id=user_id, title=title, company=company, location=location,
-            type=type, start_date=start_date, end_date=end_date
-        )
-        session.add(experience)
-        session.commit()
-        session.refresh(experience)
-        for bullet in bullets:
-            bp = ExperienceBulletPoint(experience_id=experience.id, bullet_text=bullet)
-            session.add(bp)
-        session.commit()
-        return experience
-
-@app.put("/experiences/{experience_id}/bullets")
-def update_experience_bullets(experience_id: int = Path(...), bullets_json: str = Form(...)):
-    bullets = json.loads(bullets_json)
-    with Session(engine) as session:
-        session.exec(select(ExperienceBulletPoint).where(ExperienceBulletPoint.experience_id == experience_id)).delete()
-        for bullet in bullets:
-            bp = ExperienceBulletPoint(experience_id=experience_id, bullet_text=bullet)
-            session.add(bp)
-        session.commit()
-        return {"message": "Experience bullets updated"}
 
 @app.delete("/skills/{skill_id}")
 def delete_skill(skill_id: int):
@@ -263,7 +232,34 @@ def delete_resume(resume_id: int):
         session.delete(resume)
         session.commit()
         return {"message": "Resume deleted"}
-
+    
+@app.post("/experiences")
+def add_experience(
+    user_id: int = Form(...),
+    title: str = Form(...),
+    company: str = Form(...),
+    location: Optional[str] = Form(None),
+    type: Optional[str] = Form(None),
+    start_date: Optional[date] = Form(None),
+    end_date: Optional[date] = Form(None),
+    bullets_json: Optional[str] = Form("[]")
+):
+    with Session(engine) as session:
+        experience = Experience(
+            user_id=user_id,
+            title=title,
+            company=company,
+            location=location,
+            type=type,
+            start_date=start_date,
+            end_date=end_date,
+            bullets=bullets_json  # just store the raw JSON string
+        )
+        session.add(experience)
+        session.commit()
+        session.refresh(experience)
+        return experience
+    
 @app.delete("/experiences/{experience_id}")
 def delete_experience(experience_id: int):
     with Session(engine) as session:
@@ -274,6 +270,7 @@ def delete_experience(experience_id: int):
         session.commit()
         return {"message": "Experience deleted"}
 
+
 @app.put("/experiences/{experience_id}")
 def update_experience(
     experience_id: int = Path(...),
@@ -283,17 +280,21 @@ def update_experience(
     type: Optional[str] = Form(None),
     start_date: Optional[date] = Form(None),
     end_date: Optional[date] = Form(None),
+    bullets_json: Optional[str] = Form("[]")  # accept updated bullet points
 ):
     with Session(engine) as session:
         experience = session.get(Experience, experience_id)
         if not experience:
             raise HTTPException(status_code=404, detail="Experience not found")
+
         experience.title = title
         experience.company = company
         experience.location = location
         experience.type = type
         experience.start_date = start_date
         experience.end_date = end_date
+        experience.bullets = bullets_json  # update JSON-encoded bullets
+
         session.add(experience)
         session.commit()
         session.refresh(experience)
@@ -338,13 +339,26 @@ def delete_study_set(set_id: int):
 
 # StudyFile CRUD
 @app.post("/studyfiles")
-def upload_study_file(study_set_id: int = Form(...), file_name: str = Form(...), file_url: str = Form(...)):
+def upload_study_file(
+    study_set_id: int = Form(...),
+    file: UploadFile = File(...)
+):
+    # Save file locally
+    local_path = f"uploads/{file.filename}"
+    with open(local_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
+    file_url = f"/uploads/{file.filename}"  # adjust if serving files via a static route
+
     with Session(engine) as session:
-        file = StudyFile(study_set_id=study_set_id, file_name=file_name, file_url=file_url)
-        session.add(file)
+        study_set = session.get(StudySet, study_set_id)
+        if not study_set:
+            raise HTTPException(status_code=404, detail="StudySet not found")
+        new_file = StudyFile(study_set_id=study_set_id, file_name=file.filename, file_url=file_url)
+        session.add(new_file)
         session.commit()
-        session.refresh(file)
-        return file
+        session.refresh(new_file)
+        return new_file
 
 @app.get("/studyfiles/{study_set_id}")
 def get_study_files(study_set_id: int):
@@ -391,3 +405,7 @@ def add_chat_message(thread_id: int = Form(...), sender: str = Form(...), conten
         session.commit()
         session.refresh(message)
         return message
+
+from fastapi.staticfiles import StaticFiles
+
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")

@@ -10,7 +10,7 @@ import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import { useNavigate } from 'react-router-dom';
 
 interface StudyCardProps {
-  id: string;
+  id: number;
   title: string;
   description: string;
   createdAt: string; // ISO string or formatted date
@@ -35,7 +35,7 @@ const StudySetCard: React.FC<StudyCardProps> = ({
         maxWidth: 350
       }}
     >
-      <CardActionArea onClick={() => navigate(`/study/${id}`)} sx={{ p: 1 }}>
+      <CardActionArea onClick={() => navigate(`/dashboard/studythread/${id}`)} sx={{ p: 1 }}>
         <Box mb={1}>
           <Typography variant="h6" fontWeight="bold">
             {title}

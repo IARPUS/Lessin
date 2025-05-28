@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-const API_URL = 'https://lessin.onrender.com';
-
+//const API_URL = 'https://lessin.onrender.com'; //for vercel testing
+const API_URL = 'http://127.0.0.1:8000' //for local testing
 interface RegisterPayload {
   // define the expected payload shape
   username: string;

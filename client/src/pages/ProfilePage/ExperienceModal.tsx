@@ -9,7 +9,9 @@ import {
   FormControlLabel
 } from '@mui/material';
 import type { UserExperience } from '../../components/types/profileTypes';
-import { updateExperience } from "../../apis/profiles"
+import { updateExperience, addExperience } from "../../apis/profiles";
+import { useAuth } from '../../contexts/AuthContext';
+
 interface ExperienceModalProps {
   open: boolean;
   onClose: () => void;
@@ -17,7 +19,14 @@ interface ExperienceModalProps {
   initialData?: UserExperience;
 }
 
-const ExperienceModal: React.FC<ExperienceModalProps> = ({ open, onClose, onSave, initialData }) => {
+const ExperienceModal: React.FC<ExperienceModalProps> = ({
+  open,
+  onClose,
+  onSave,
+  initialData
+}) => {
+  const { userId } = useAuth();
+
   const [formData, setFormData] = useState<UserExperience>({
     title: '',
     company: '',
@@ -57,11 +66,13 @@ const ExperienceModal: React.FC<ExperienceModalProps> = ({ open, onClose, onSave
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    console.log('CHANGED:', e.target.name, e.target.value);
+
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   const handleCheckbox = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData((prev) => ({ ...prev, current: e.target.checked }));
+    setFormData(prev => ({ ...prev, current: e.target.checked }));
   };
 
   const handleSubmit = async () => {
@@ -73,30 +84,46 @@ const ExperienceModal: React.FC<ExperienceModalProps> = ({ open, onClose, onSave
       }
     }
 
-    const payload: UserExperience = {
-      ...formData,
-      endDate: formData.current ? 'Present' : formData.endDate,
-    };
+    if (!userId) {
+      alert('You must be logged in to save experience.');
+      return;
+    }
+
+    const bulletArray = formData.description
+      .split('\n')
+      .map(line => line.trim())
+      .filter(line => line !== '');
 
     try {
       if (initialData?.id) {
         await updateExperience(initialData.id, {
-          title: payload.title,
-          company: payload.company,
-          location: payload.location,
-          type: payload.type,
-          startDate: payload.startDate,
-          endDate: payload.endDate === 'Present' ? '' : payload.endDate,
+          title: formData.title,
+          company: formData.company,
+          location: formData.location,
+          type: formData.type,
+          startDate: formData.startDate,
+          endDate: formData.current ? '' : formData.endDate,
+          bullets: bulletArray,
         });
+        onSave({ ...formData, endDate: formData.current ? 'Present' : formData.endDate, id: initialData.id });
       } else {
-        onSave(payload); // create mode uses passed in onSave()
+        const response = await addExperience(parseInt(userId), {
+          title: formData.title,
+          company: formData.company,
+          location: formData.location,
+          type: formData.type,
+          startDate: formData.startDate,
+          endDate: formData.current ? '' : formData.endDate,
+          bullets: bulletArray,
+        });
+        onSave({ ...formData, endDate: formData.current ? 'Present' : formData.endDate, id: response.id });
       }
+
       onClose();
     } catch (error) {
       console.error('Failed to save experience:', error);
     }
   };
-
 
   return (
     <Modal open={open} onClose={onClose}>
@@ -156,33 +183,38 @@ const ExperienceModal: React.FC<ExperienceModalProps> = ({ open, onClose, onSave
         <Box display="flex" gap={2} mb={2}>
           <TextField
             label="Start Date"
-            name="startDate"
             type="date"
             InputLabelProps={{ shrink: true }}
+            inputProps={{ name: 'startDate' }}
             value={formData.startDate}
             onChange={handleChange}
             fullWidth
           />
+
           <TextField
             label="End Date"
-            name="endDate"
             type="date"
             InputLabelProps={{ shrink: true }}
+            inputProps={{ name: 'endDate' }}
             value={formData.endDate}
             onChange={handleChange}
             fullWidth
             disabled={formData.current}
           />
+
+
+
+
         </Box>
 
         <FormControlLabel
           control={<Checkbox checked={formData.current} onChange={handleCheckbox} />}
           label="I currently work here"
-          sx={{ mb: 2, color: "gray" }}
+          sx={{ mb: 2, color: 'gray' }}
         />
 
         <TextField
-          label="Description"
+          label="Description (one bullet per line)"
           name="description"
           fullWidth
           multiline
@@ -194,7 +226,9 @@ const ExperienceModal: React.FC<ExperienceModalProps> = ({ open, onClose, onSave
 
         <Box display="flex" justifyContent="flex-end" gap={2}>
           <Button onClick={onClose}>Cancel</Button>
-          <Button variant="contained" onClick={handleSubmit}>Save</Button>
+          <Button variant="contained" onClick={handleSubmit}>
+            Save
+          </Button>
         </Box>
       </Box>
     </Modal>

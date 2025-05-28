@@ -6,7 +6,7 @@ import ExperienceCard from './ExperienceCard';
 import ResumeUploadModal from './ResumeUploadModal';
 import ExperienceModal from './ExperienceModal';
 import SkillsModal from './SkillsModal';
-import { fetchUserProfile } from '../../apis/profiles';
+import { fetchUserProfile, deleteExperience } from '../../apis/profiles';
 import { useAuth } from '../../contexts/AuthContext'; // Adjust path if needed
 
 const ProfilePage: React.FC = () => {
@@ -44,7 +44,7 @@ const ProfilePage: React.FC = () => {
 
       // Experiences
       setExperiences(profile.experiences);
-
+      console.log(profile.experiences)
       // Resume
       if (profile.resumes && profile.resumes.length > 0) {
         const latest = profile.resumes[0];
@@ -82,20 +82,27 @@ const ProfilePage: React.FC = () => {
   };
 
   const handleExperienceSave = (data: any) => {
-    if (editingExperience) {
-      setExperiences(prev =>
-        prev.map(exp =>
-          exp.title === editingExperience.title && exp.company === editingExperience.company
-            ? data
-            : exp
-        )
-      );
-    } else {
-      setExperiences(prev => [...prev, data]);
-    }
-    setEditingExperience(null);
-    setExpModalOpen(false);
+    setExperiences(prev => {
+      const isEditing = data.id !== undefined && prev.some(e => e.id === data.id);
+
+      const newData = {
+        ...data,
+        bullets: JSON.stringify( // ensure format matches backend
+          data.description
+            .split('\n')
+            .map((line) => line.trim())
+            .filter((line) => line !== '')
+        ),
+      };
+
+      if (isEditing) {
+        return prev.map(e => e.id === data.id ? newData : e);
+      } else {
+        return [newData, ...prev];
+      }
+    });
   };
+
 
   return (
     <Box display="flex" bgcolor="#f9fafb" minHeight="100vh" px={4} py={4}>
@@ -152,19 +159,56 @@ const ProfilePage: React.FC = () => {
               Add New Experience
             </Button>
           </Box>
+          {experiences.map((exp, index) => {
+            const parsedBullets = (() => {
+              try {
+                return JSON.parse(exp.bullets || '[]');
+              } catch {
+                return [];
+              }
+            })();
 
-          {experiences.map((exp, index) => (
-            <Box mb={3} key={index}>
-              <ExperienceCard
-                {...exp}
-                bullets={exp.description.split('\n')}
-                onEdit={() => {
-                  setEditingExperience(exp);
-                  setExpModalOpen(true);
-                }}
-              />
-            </Box>
-          ))}
+            return (
+              <Box mb={3} key={index}>
+                <ExperienceCard
+                  {...exp}
+                  bullets={(() => {
+                    try {
+                      const parsed = JSON.parse(exp.bullets || '[]');
+                      return Array.isArray(parsed) ? parsed : [];
+                    } catch {
+                      return [];
+                    }
+                  })()}
+                  onEdit={() => {
+                    setEditingExperience({
+                      ...exp,
+                      description: (() => {
+                        try {
+                          const parsed = JSON.parse(exp.bullets || '[]');
+                          return Array.isArray(parsed) ? parsed.join('\n') : '';
+                        } catch {
+                          return '';
+                        }
+                      })(),
+                    });
+                    setExpModalOpen(true);
+                  }}
+                  onDelete={async () => {
+                    try {
+                      await deleteExperience(exp.id);
+                      setExperiences((prev) => prev.filter((e) => e.id !== exp.id));
+                    } catch (err) {
+                      console.error('Failed to delete experience:', err);
+                    }
+                  }}
+                />
+
+
+              </Box>
+            );
+          })}
+
 
           <ExperienceModal
             open={expModalOpen}
