@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-const API_URL = 'http://127.0.0.1:8000'; // local testing
+// const API_URL = 'http://127.0.0.1:8000'; // local testing
+const API_URL = 'https://lessin-aese.onrender.com';
 export const createStudySet = async (
   userId: number,
   title: string,

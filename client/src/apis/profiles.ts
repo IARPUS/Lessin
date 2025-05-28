@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-//const API_URL = 'https://lessin.onrender.com'; //for vercel testing
-const API_URL = 'http://127.0.0.1:8000' //for local testing
+const API_URL = 'https://lessin-aese.onrender.com'; //for vercel testing
+// const API_URL = 'http://127.0.0.1:8000' //for local testing
 // ====================== GET PROFILE ======================
 export const fetchUserProfile = async (userId: number) => {
   const res = await axios.get(`${API_URL}/profile/${userId}`);
